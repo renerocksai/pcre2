@@ -60,11 +60,8 @@ pub fn main() !void {
 
     _ = arg_it.next(); // skip process name
 
-    // more elaborate example: use with c.PCRE2_DOTALL to match links even if
-    // they contain a newline.
     const pattern = arg_it.next() orelse "(?<!\\!)\\[([^\\]]*?)\\]\\(([^)]+)\\)";
-    const subject = arg_it.next() orelse "This is markdown. We have [a link\nwith a newline](https://renerocks.ai).";
-
+    const subject = arg_it.next() orelse "This is markdown. We have [a link](https://renerocks.ai). And [another one\nwith a newline](https://ziglang.org).";
     std.debug.print("pattern = '{s}', subject = '{s}'\n", .{ pattern, subject });
 
     var error_code: c_int = undefined;
@@ -84,33 +81,44 @@ pub fn main() !void {
         if (c.pcre2_match_data_create_from_pattern_8(re, null)) |match_data| {
             defer c.pcre2_match_data_free_8(match_data);
 
-            const rc = c.pcre2_match_8(
-                re,
-                subject.ptr,
-                subject.len,
-                0, // start at offset 0 in the subject
-                0, // no special modes (e.g. no PARTIAL mode)
-                match_data,
-                null,
-            );
-            if (rc == c.PCRE2_ERROR_NOMATCH) {
-                std.debug.print("No match!\n", .{});
-            } else if (rc < 0) {
-                std.debug.print("Matching error {d}!\n", .{rc});
-            } else {
-                const ovector_count = c.pcre2_get_ovector_count_8(match_data);
-                std.debug.print("Found {d} ovectors\n", .{ovector_count});
-                const matching_string = subject[ovector[0]..ovector[1]];
-                std.debug.print("Found match 0: '{s}'\n", .{matching_string});
+            var start_offset: usize = 0;
+            while (true) {
+                const rc = c.pcre2_match_8(
+                    re,
+                    subject.ptr,
+                    subject.len,
+                    start_offset, // start at offset 0 in the subject
+                    0,
+                    match_data,
+                    null,
+                );
+                if (rc == c.PCRE2_ERROR_NOMATCH) {
+                    std.debug.print("No (more) matches!\n", .{});
+                    break;
+                } else if (rc < 0) {
+                    std.debug.print("Matching error {d}!\n", .{rc});
+                    break;
+                } else {
+                    const ovector = c.pcre2_get_ovector_pointer_8(match_data);
+                    const ovector_count = c.pcre2_get_ovector_count_8(match_data);
+                    std.debug.print("Found {d} ovectors\n", .{ovector_count});
+                    const matching_string = subject[ovector[0]..ovector[1]];
+                    std.debug.print("Found match 0: '{s}'\n", .{matching_string});
 
-                if (ovector_count > 1) {
-                    const match_1 = subject[ovector[2]..ovector[3]];
-                    std.debug.print("Found match 1: '{s}'\n", .{match_1});
-                }
+                    if (ovector_count > 1) {
+                        const match_1 = subject[ovector[2]..ovector[3]];
+                        std.debug.print("Found match 1: '{s}'\n", .{match_1});
+                    }
 
-                if (ovector_count > 2) {
-                    const match_2 = subject[ovector[4]..ovector[5]];
-                    std.debug.print("Found match 2: '{s}'\n", .{match_2});
+                    if (ovector_count > 2) {
+                        const match_2 = subject[ovector[4]..ovector[5]];
+                        std.debug.print("Found match 2: '{s}'\n", .{match_2});
+                    }
+
+                    start_offset = ovector[1];
+                    if (start_offset >= subject.len) {
+                        break;
+                    }
                 }
             }
         }
@@ -124,14 +132,19 @@ Example output:
 
 ```shell
 zig build run
-pattern = '(?<!\!)\[([^\]]*?)\]\(([^)]+)\)', subject = 'This is markdown. We have [a link
-with a newline](https://renerocks.ai).'
+pattern = '(?<!\!)\[([^\]]*?)\]\(([^)]+)\)', subject = 'This is markdown. We have [a link](https://renerocks.ai). And [another one
+with a newline](https://ziglang.org).'
 Found 3 ovectors
-Found match 0: '[a link
-with a newline](https://renerocks.ai)'
-Found match 1: 'a link
-with a newline'
+Found match 0: '[a link](https://renerocks.ai)'
+Found match 1: 'a link'
 Found match 2: 'https://renerocks.ai'
+Found 3 ovectors
+Found match 0: '[another one
+with a newline](https://ziglang.org)'
+Found match 1: 'another one
+with a newline'
+Found match 2: 'https://ziglang.org'
+No (more) matches!
 ```
 
 
