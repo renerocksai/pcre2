@@ -120,6 +120,19 @@ pub fn main() !void {
 }
 ```
 
+Example output:
+
+```shell
+zig build run
+pattern = '(?<!\!)\[([^\]]*?)\]\(([^)]+)\)', subject = 'This is markdown. We have [a link
+with a newline](https://renerocks.ai).'
+Found 3 ovectors
+Found match 0: '[a link
+with a newline](https://renerocks.ai)'
+Found match 1: 'a link
+with a newline'
+Found match 2: 'https://renerocks.ai'
+```
 
 
 
