@@ -59,6 +59,11 @@ pub fn main() !void {
 
     const pattern = arg_it.next() orelse ".*";
     const subject = arg_it.next() orelse "hello, world";
+
+    // more elaborate example: use with c.PCRE2_DOTALL:
+    // const pattern = arg_it.next() orelse "(?<!\\!)\\[([^\\]]*?)\\]\\(([^)]+)\\)";
+    // const subject = arg_it.next() orelse "[hello, link](https://google.com)";
+
     std.debug.print("pattern = '{s}', subject = '{s}'\n", .{ pattern, subject });
 
     var error_code: c_int = undefined;
