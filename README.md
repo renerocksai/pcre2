@@ -44,6 +44,9 @@ Please make sure to use the code unit width specification consistently.
 
 ## Usage Example
 
+This example tries to match Markdown links in its input by default. You can
+override pattern and subject (text to match against) on the command line.
+
 ```zig
 const std = @import("std");
 
@@ -57,12 +60,10 @@ pub fn main() !void {
 
     _ = arg_it.next(); // skip process name
 
-    const pattern = arg_it.next() orelse ".*";
-    const subject = arg_it.next() orelse "hello, world";
-
-    // more elaborate example: use with c.PCRE2_DOTALL:
-    // const pattern = arg_it.next() orelse "(?<!\\!)\\[([^\\]]*?)\\]\\(([^)]+)\\)";
-    // const subject = arg_it.next() orelse "[hello, link](https://google.com)";
+    // more elaborate example: use with c.PCRE2_DOTALL to match links even if
+    // they contain a newline.
+    const pattern = arg_it.next() orelse "(?<!\\!)\\[([^\\]]*?)\\]\\(([^)]+)\\)";
+    const subject = arg_it.next() orelse "This is markdown. We have [a link\nwith a newline](https://renerocks.ai).";
 
     std.debug.print("pattern = '{s}', subject = '{s}'\n", .{ pattern, subject });
 
@@ -72,7 +73,7 @@ pub fn main() !void {
     const re_ptr = c.pcre2_compile_8(
         pattern.ptr,
         pattern.len,
-        0, // or sth like c.PCRE2_DOTALL,
+        c.PCRE2_DOTALL,
         &error_code,
         &error_offset,
         null,
@@ -88,7 +89,7 @@ pub fn main() !void {
                 subject.ptr,
                 subject.len,
                 0, // start at offset 0 in the subject
-                0, // or sth like c.PCRE2_DOTALL,
+                0, // no special modes (e.g. no PARTIAL mode)
                 match_data,
                 null,
             );
@@ -97,9 +98,20 @@ pub fn main() !void {
             } else if (rc < 0) {
                 std.debug.print("Matching error {d}!\n", .{rc});
             } else {
-                const ovector = c.pcre2_get_ovector_pointer_8(match_data);
+                const ovector_count = c.pcre2_get_ovector_count_8(match_data);
+                std.debug.print("Found {d} ovectors\n", .{ovector_count});
                 const matching_string = subject[ovector[0]..ovector[1]];
-                std.debug.print("Found match: '{s}'\n", .{matching_string});
+                std.debug.print("Found match 0: '{s}'\n", .{matching_string});
+
+                if (ovector_count > 1) {
+                    const match_1 = subject[ovector[2]..ovector[3]];
+                    std.debug.print("Found match 1: '{s}'\n", .{match_1});
+                }
+
+                if (ovector_count > 2) {
+                    const match_2 = subject[ovector[4]..ovector[5]];
+                    std.debug.print("Found match 2: '{s}'\n", .{match_2});
+                }
             }
         }
     } else {
