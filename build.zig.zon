@@ -3,8 +3,8 @@
     .version = "10.45.0",
     .dependencies = .{
         .pcre2 = .{
-            .url = "https://github.com/PCRE2Project/pcre2/archive/refs/tags/pcre2-10.45.tar.gz",
-            .hash = "1220c927731a4b31f5ebf8b4f33f0efe6fa1561cdcf026f39cbee512e08ad24fb785",
+            .url = "https://github.com/renerocksai/pcre2-fork/archive/refs/tags/pcre2-10.45-nozig.tar.gz",
+            .hash = "1220be498402517e45c49ca9dedb6418f532a435c8ccd3849266226cd0b832559858",
         },
     },
     .paths = .{

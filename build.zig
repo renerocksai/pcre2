@@ -42,6 +42,8 @@ pub fn build(b: *std.Build) !void {
             .PCRE2_MAX_VARLOOKBEHIND = 255,
             .NEWLINE_DEFAULT = 2,
             .PCRE2_PARENS_NEST_LIMIT = 250,
+            .PCRE2GREP_BUFSIZE = 20480,
+            .PCRE2GREP_MAX_BUFSIZE = 1048576,
         },
     );
 
@@ -49,21 +51,20 @@ pub fn build(b: *std.Build) !void {
 
     const lib = std.Build.Step.Compile.create(b, .{
         .name = b.fmt("pcre2-{s}", .{@tagName(codeUnitWidth)}),
-        .root_module = .{
+        .root_module = std.Build.Module.create(b, .{
             .target = target,
             .optimize = optimize,
             .link_libc = true,
-        },
+        }),
         .kind = .lib,
         .linkage = linkage,
     });
 
-    lib.defineCMacro("HAVE_CONFIG_H", null);
-    lib.defineCMacro("PCRE2_CODE_UNIT_WIDTH", @tagName(codeUnitWidth));
+    lib.root_module.addCMacro("HAVE_CONFIG_H", "1");
+    lib.root_module.addCMacro("PCRE2_CODE_UNIT_WIDTH", @tagName(codeUnitWidth));
     if (linkage == .static) {
-        lib.defineCMacro("PCRE2_STATIC", null);
+        lib.root_module.addCMacro("PCRE2_STATIC", "1");
     }
-
     lib.addConfigHeader(config_header);
     lib.addIncludePath(pcre2_header_dir.getDirectory());
     lib.addIncludePath(upstream.path("src"));
@@ -122,19 +123,19 @@ pub fn build(b: *std.Build) !void {
     if (codeUnitWidth == CodeUnitWidth.@"8") {
         const posixLib = std.Build.Step.Compile.create(b, .{
             .name = "pcre2-posix",
-            .root_module = .{
+            .root_module = std.Build.Module.create(b, .{
                 .target = target,
                 .optimize = optimize,
                 .link_libc = true,
-            },
+            }),
             .kind = .lib,
             .linkage = linkage,
         });
 
-        posixLib.defineCMacro("HAVE_CONFIG_H", null);
-        posixLib.defineCMacro("PCRE2_CODE_UNIT_WIDTH", @tagName(codeUnitWidth));
+        posixLib.root_module.addCMacro("HAVE_CONFIG_H", "1");
+        posixLib.root_module.addCMacro("PCRE2_CODE_UNIT_WIDTH", @tagName(codeUnitWidth));
         if (linkage == .static) {
-            posixLib.defineCMacro("PCRE2_STATIC", null);
+            posixLib.root_module.addCMacro("PCRE2_STATIC", "1");
         }
 
         posixLib.addConfigHeader(config_header);
@@ -156,7 +157,7 @@ pub fn build(b: *std.Build) !void {
 
     // pcre2test (again)
 
-    pcre2test.defineCMacro("HAVE_CONFIG_H", null);
+    pcre2test.root_module.addCMacro("HAVE_CONFIG_H", "1");
 
     pcre2test.addConfigHeader(config_header);
     pcre2test.addIncludePath(pcre2_header_dir.getDirectory());
